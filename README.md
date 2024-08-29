@@ -53,15 +53,20 @@
 
 2. **Select Time Unit:**
    - Choose whether you want to set the timer in seconds, minutes, or hours.
+     ![image](https://github.com/user-attachments/assets/b6330bf8-a6cd-4036-b56d-edd0e19a6f53)
+
 
 3. **Set the Timer:**
    - Input the duration for which the app should run, and click **Start**.
+     ![image](https://github.com/user-attachments/assets/2c1c169c-ab33-4bf6-94b7-40e005db3c25)
 
 4. **Pause/Unpause:**
    - Click **Pause** to temporarily stop the timer. Click **Unpause** to resume.
+     
 
 5. **Stop and Kill App:**
    - If you want to stop the timer and close the app before time runs out, click **Stop**.
+     ![image](https://github.com/user-attachments/assets/487238c4-6172-43ff-bba0-c3b61401df03)
 
 6. **Enjoy Managed Screen Time:**
    - The app will automatically close when the timer ends, helping you stick to your intended usage time.
