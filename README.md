@@ -2,6 +2,9 @@
 
 **AppTimer-GUI** is the graphical version of the original AppTimer, now with additional features to help you manage your time more effectively. Built using the Fyne toolkit, this tool offers a user-friendly interface for setting time limits on app usage, making it easier to control screen time and stay focused.
 
+![image](https://github.com/user-attachments/assets/68855d03-101d-43d3-b4ac-d733df7356f9)
+
+
 ## Key Features
 
 - **User-Friendly GUI:** A simple and intuitive graphical interface for easy use.
