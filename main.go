@@ -11,6 +11,7 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -20,12 +21,14 @@ var (
 	remainingTime  int
 	mu             sync.Mutex
 	pauseResumeBtn *widget.Button
+	progressBar    *widget.ProgressBar
+	totalTime      int
 )
 
 func main() {
 	a := app.New()
 	w := a.NewWindow("AppTimer")
-	w.Resize(fyne.NewSize(400, 300))
+	w.Resize(fyne.NewSize(400, 400))
 
 	// Input fields
 	countdownEntry := widget.NewEntry()
@@ -38,11 +41,18 @@ func main() {
 
 	timeRemainingLabel := widget.NewLabel("Time remaining: --")
 
+	// Progress bar
+	progressBar = widget.NewProgressBar()
+	progressBar.Hide()
+
 	// Start/Stop and Pause/Resume buttons
 	startStopBtn := widget.NewButton("Start Timer", nil)
 	pauseResumeBtn = widget.NewButton("Pause Timer", nil)
 	pauseResumeBtn.Disable()
 	var stopTimer func()
+
+	// Notification checkbox
+	notifyCheckbox := widget.NewCheck("Enable notifications", nil)
 
 	startStopBtn.OnTapped = func() {
 		if timerRunning {
@@ -73,6 +83,7 @@ func main() {
 				return
 			}
 			remainingTime = duration * unitMultiplier
+			totalTime = remainingTime
 
 			pid, err := launchApp(appName)
 			if err != nil {
@@ -83,6 +94,7 @@ func main() {
 			startStopBtn.SetText("Stop Timer And Kill App")
 			pauseResumeBtn.Enable()
 			pauseResumeBtn.SetText("Pause Timer")
+			progressBar.Show()
 			mu.Lock()
 			timerRunning = true
 			timerPaused = false
@@ -102,6 +114,7 @@ func main() {
 				startStopBtn.SetText("Start Timer")
 				pauseResumeBtn.Disable()
 				timeRemainingLabel.SetText("Time remaining: --")
+				progressBar.Hide()
 			}
 
 			pauseResumeBtn.OnTapped = func() {
@@ -109,7 +122,7 @@ func main() {
 				if timerPaused {
 					timerPaused = false
 					pauseResumeBtn.SetText("Pause Timer")
-					go countdownTimer(pid, timeRemainingLabel, stopTimer)
+					go countdownTimer(pid, timeRemainingLabel, stopTimer, notifyCheckbox.Checked)
 				} else {
 					timerPaused = true
 					pauseResumeBtn.SetText("Resume Timer")
@@ -117,9 +130,18 @@ func main() {
 				mu.Unlock()
 			}
 
-			go countdownTimer(pid, timeRemainingLabel, stopTimer)
+			go countdownTimer(pid, timeRemainingLabel, stopTimer, notifyCheckbox.Checked)
 		}
 	}
+
+	// Theme toggle
+	themeToggle := widget.NewCheck("Dark Theme", func(value bool) {
+		if value {
+			a.Settings().SetTheme(theme.DarkTheme())
+		} else {
+			a.Settings().SetTheme(theme.LightTheme())
+		}
+	})
 
 	// Layout
 	form := container.NewVBox(
@@ -129,15 +151,18 @@ func main() {
 		widget.NewLabel("Enter the app you want to limit time on:"),
 		appNameEntry,
 		timeRemainingLabel,
+		progressBar,
 		startStopBtn,
 		pauseResumeBtn,
+		notifyCheckbox,
+		themeToggle,
 	)
 
 	w.SetContent(form)
 	w.ShowAndRun()
 }
 
-func countdownTimer(pid int, timeRemainingLabel *widget.Label, stopTimer func()) {
+func countdownTimer(pid int, timeRemainingLabel *widget.Label, stopTimer func(), notify bool) {
 	for remainingTime > 0 {
 		mu.Lock()
 		if !timerRunning || timerPaused {
@@ -145,7 +170,13 @@ func countdownTimer(pid int, timeRemainingLabel *widget.Label, stopTimer func())
 			break
 		}
 		timeRemainingLabel.SetText(fmt.Sprintf("Time remaining: %d seconds", remainingTime))
+		progressBar.SetValue(float64(totalTime-remainingTime) / float64(totalTime))
 		mu.Unlock()
+
+		if notify && remainingTime == 60 { // Notify when 1 minute is left
+			notifyUser("1 minute remaining!")
+		}
+
 		time.Sleep(1 * time.Second)
 		remainingTime--
 	}
@@ -159,6 +190,9 @@ func countdownTimer(pid int, timeRemainingLabel *widget.Label, stopTimer func())
 			dialog.ShowError(fmt.Errorf("failed to kill app: %v", err), nil)
 		} else {
 			dialog.ShowInformation("Time's Up", fmt.Sprintf("Time's up! App has been closed."), nil)
+			if notify {
+				notifyUser("Time's up! App has been closed.")
+			}
 		}
 		stopTimer()
 	} else {
@@ -187,4 +221,9 @@ func killAppByPID(pid int) error {
 
 	fmt.Printf("Process with PID %d has been killed.\n", pid)
 	return nil
+}
+
+func notifyUser(message string) {
+	cmd := exec.Command("notify-send", "AppTimer", message)
+	cmd.Run()
 }
